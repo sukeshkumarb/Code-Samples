@@ -1,0 +1,60 @@
+1. Creating the table structure if not present in the system already
+--
+-- Table structure for table `url_redirects`
+--
+ 
+CREATE TABLE IF NOT EXISTS `url_redirects` (
+  `id` int(11) NOT NULL auto_increment,
+  `short` varchar(10) NOT NULL,
+  `url` varchar(255) NOT NULL,
+  `created_at` timestamp NOT NULL default CURRENT_TIMESTAMP,
+  PRIMARY KEY  (`id`),
+  KEY `short` (`short`)
+) ENGINE=MyISAM  DEFAULT CHARSET=utf8;
+
+2. Code for creating the short URL in php
+
+<?php
+  require("./db_config.php");
+   
+  $url = $_REQUEST['url'];
+   
+  if(!preg_match("/^[a-zA-Z]+[:\/\/]+[A-Za-z0-9\-_]+\\.+[A-Za-z0-9\.\/%&=\?\-_]+$/i", $url)) {
+    $html = "Error: invalid URL";
+  } else {
+     
+    $db = mysql_connect($host, $username, $password);
+     
+      $short = substr(md5(time().$url), 0, 5);
+     
+      if(mysql_query("INSERT INTO `".$database."`.`url_redirects` (`short`, `url`) VALUES ('".$short."', '".$url."');", $db)) {
+        $html = "Your short URL is<br />shrtr.me/".$short;
+      } else {
+        $html = "Error: cannot find database";
+      }
+     
+    mysql_close($db);
+  }
+?>
+
+3. Serving the short URL by retrieving the results
+
+<?php
+  require("./db_config.php");
+ 
+  $short = $_REQUEST['short'];
+ 
+  $db = mysql_connect($host, $username, $password);    
+    $query = mysql_query("SELECT * FROM `".$database."`.`url_redirects` WHERE `short`='".mysql_escape_string($short)."' LIMIT 1", $db);
+    $row = mysql_fetch_row($query);
+ 
+    if(!empty($row)) {
+      Header("HTTP/1.1 301 Moved Permanently");
+      header("Location: ".$row[2]."");
+    } else {
+      $html = "Error: cannot find short URL";
+    }
+ 
+  mysql_close($db);
+?>
+
